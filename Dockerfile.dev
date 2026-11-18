@@ -1,0 +1,9 @@
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /workspace
+
+# This exercise uses only Python standard-library packages.
+CMD ["python", "-m", "unittest", "discover", "-s", "tests", "-v"]

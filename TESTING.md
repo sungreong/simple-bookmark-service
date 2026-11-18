@@ -14,9 +14,13 @@ Alice가 같은 게시물의 북마크 추가 버튼을 두 번 눌렀다고 가
 
 ## 기준 테스트
 
+Docker Compose를 사용할 수 있다면 다음 명령을 우선합니다.
+
 ```bash
-python -m unittest discover -s tests -v
+docker compose -f compose.dev.yaml run --build --rm test
 ```
+
+로컬 Python을 사용하는 대안은 `python -m unittest discover -s tests -v`입니다. 어느 환경에서 실행했는지, 실제 출력과 종료 코드를 기록합니다.
 
 초기 `main`에서는 세 테스트 중 `test_saving_the_same_bookmark_twice_is_idempotent`가 실패합니다. 나머지 두 테스트는 통과해야 합니다. 이 실패는 실습을 위한 의도적인 결함을 보여 줍니다.
 

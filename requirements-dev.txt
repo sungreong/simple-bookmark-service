@@ -1,0 +1,2 @@
+# No third-party dependencies are required for the current development tests.
+# sqlite3 and unittest are included in the Python standard library.

@@ -20,12 +20,24 @@ Windows에서 `python` 명령이 없으면 `py -m unittest discover -s tests -v`
 
 처음 상태에서는 사용자별 저장과 조회를 확인하는 테스트는 통과하고, 중복 저장을 막는 테스트 **한 개가 실패**해야 합니다. 상세 요구사항과 에이전트 전달 예시는 [테스트 가이드](TESTING.md)를 확인하세요.
 
+### Docker Compose 개발 환경
+
+Docker와 Docker Compose가 설치되어 있으면 다음 명령으로 같은 단위 테스트를 컨테이너에서 실행할 수 있습니다.
+
+```bash
+docker compose -f compose.dev.yaml run --build --rm test
+```
+
+`test` 서비스는 Python 3.12의 `slim` 이미지를 사용하고 현재 저장소를 `/workspace`에 마운트합니다. 테스트는 임시 SQLite DB를 사용하며 포트나 외부 DB가 필요하지 않습니다. 첫 실행에는 이미지 다운로드가 필요합니다. 별도 pip 패키지는 설치하지 않습니다. `requirements-dev.txt`는 현재 필요한 외부 개발 패키지가 없다는 것을 기록합니다.
+
 ## 구성
 
 - `bookmark_service.py`: SQLite 기반 북마크 추가와 사용자별 조회
 - `tests/test_bookmark_service.py`: 정상 동작과 알려진 버그의 회귀 테스트
 - `TESTING.md`: 테스트 시나리오와 완료 조건
 - `AGENTS.md`: 코딩 에이전트가 저장소를 조사하고 단위 테스트를 실행할 때 따를 지침
+- `Dockerfile.dev`, `compose.dev.yaml`: 컨테이너 기반 개발·테스트 환경
+- `requirements-dev.txt`: 외부 개발 패키지 목록
 
 ## 프로젝트 API
 
