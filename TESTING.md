@@ -10,7 +10,18 @@ Alice가 같은 게시물의 북마크 추가 버튼을 두 번 눌렀다고 가
 
 **기대 결과:** 두 호출은 같은 ID를 반환하고, 목록에는 해당 북마크가 하나만 있습니다.
 
-**현재 결과:** 새로운 ID가 두 번 반환되고 목록에 같은 URL이 중복됩니다.
+**수정 전 결과 (기준 커밋 `f07bdd2`):** 새로운 ID가 두 번 반환되고 목록에 같은 URL이 중복됩니다.
+
+**현재 결과:** 기대 결과와 같습니다(이슈 #1의 결함, 이슈 #3 작업에서 함께 수정). `test_saving_the_same_bookmark_twice_is_idempotent`가 확인합니다.
+
+## 시나리오: 빈 URL은 저장하지 않습니다 (이슈 #3)
+
+1. `add_bookmark("alice", "")`, `add_bookmark("alice", "   ")`, `add_bookmark("alice", "\t\n")`를 호출합니다.
+2. Alice의 목록을 확인합니다.
+
+**기대 결과:** 각 호출은 `ValueError`를 발생시키고 목록은 비어 있습니다. 다른 사용자의 북마크와 정상 URL 저장에는 영향이 없습니다.
+
+**수정 전 결과:** 세 URL이 모두 새 행으로 저장되었습니다.
 
 ## 기준 테스트
 
@@ -22,7 +33,14 @@ docker compose -f compose.dev.yaml run --build --rm test
 
 로컬 Python을 사용하는 대안은 `python -m unittest discover -s tests -v`입니다. 어느 환경에서 실행했는지, 실제 출력과 종료 코드를 기록합니다.
 
-초기 `main`에서는 세 테스트 중 `test_saving_the_same_bookmark_twice_is_idempotent`가 실패합니다. 나머지 두 테스트는 통과해야 합니다. 이 실패는 실습을 위한 의도적인 결함을 보여 줍니다.
+현재는 아래 12개 테스트가 모두 통과해야 합니다. 기준 커밋 `f07bdd2`에서는 테스트가 세 개였고 그중 `test_saving_the_same_bookmark_twice_is_idempotent`가 `AssertionError: 1 != 2`로 실패했습니다.
+
+| 테스트 클래스 | 확인하는 조건 |
+|---|---|
+| `BookmarkServiceTests` | 저장과 사용자별 조회, 다른 사용자의 같은 URL 허용, 순차 반복 저장 시 같은 ID·행 1개 |
+| `EmptyUrlTests` | 빈/공백/탭·개행/전각 공백 URL의 `ValueError`와 행 없음·열린 트랜잭션 없음, 다른 사용자·기존 북마크 영향 없음, 앞뒤 공백 있는 URL은 그대로 저장, 호출자 트랜잭션 유지 |
+| `ExistingDuplicateDataTests` | 수정 전 DB의 중복 행 유지, 가장 오래된 ID 반환, 신규 중복 없음 |
+| `ConcurrentSaveTests` | 8개 연결 동시 저장 × 5회(기본 journal, WAL): 같은 ID, 행 1개 / 이미 읽은 호출자 트랜잭션의 잠금 오류 전파와 롤백 후 전체 재시도 / 일반 호출의 busy timeout 초과 시 오류 전파·열린 트랜잭션 없음 |
 
 ## 에이전트에 줄 요청 예시
 
@@ -53,4 +71,4 @@ docker compose -f compose.dev.yaml run --build --rm test
 - [ ] 수정 범위, 기존 DB에 미치는 영향, 동시 요청에서의 한계를 설명했나요?
 - [ ] diff와 테스트를 사람이 확인할 때까지 PR 생성이나 병합을 기다리나요?
 
-이 가이드의 기본 테스트는 **순차 반복 요청**을 재현합니다. 여러 프로세스가 동시에 요청하는 상황이나 기존 DB의 중복 정리는 별도 테스트와 설계가 필요합니다.
+동시성 테스트는 한 프로세스 안에서 스레드마다 별도의 연결을 사용합니다. 잠금은 DB 파일 단위이므로 같은 원리가 적용되지만 여러 프로세스의 동시 요청은 테스트하지 않습니다. 기존 DB의 중복 정리(삭제·병합)는 하지 않으며 별도 설계가 필요합니다.

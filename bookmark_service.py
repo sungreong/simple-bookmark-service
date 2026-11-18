@@ -18,12 +18,48 @@ class BookmarkService:
         self.connection.commit()
 
     def add_bookmark(self, user_id: str, url: str) -> int:
-        """Save a bookmark and return its database ID."""
-        cursor = self.connection.execute(
-            "INSERT INTO bookmarks (user_id, url) VALUES (?, ?)", (user_id, url)
-        )
-        self.connection.commit()
-        return cursor.lastrowid
+        """Save a bookmark and return its database ID.
+
+        An empty or whitespace-only URL raises ValueError before the database
+        is touched. Other URLs are stored exactly as given.
+
+        Saving the same (user_id, url) again returns the existing ID instead of
+        adding a row. Rows duplicated before this check existed are kept; the
+        oldest one's ID is returned.
+
+        When no transaction is open, the lookup and insert run under
+        BEGIN IMMEDIATE so concurrent writers cannot both insert, and the
+        transaction is ended here with SQL COMMIT/ROLLBACK. If the caller
+        already opened a transaction, the work joins it and is committed with
+        connection.commit() as before; a "database is locked" error raised
+        there is propagated so the caller can roll back and retry its whole
+        transaction.
+        """
+        if isinstance(url, str) and not url.strip():
+            raise ValueError("url must not be empty or whitespace only")
+        owns_transaction = not self.connection.in_transaction
+        if owns_transaction:
+            self.connection.execute("BEGIN IMMEDIATE")
+        try:
+            row = self.connection.execute(
+                "SELECT MIN(id) FROM bookmarks WHERE user_id = ? AND url = ?",
+                (user_id, url),
+            ).fetchone()
+            if row[0] is not None:
+                bookmark_id = row[0]
+            else:
+                bookmark_id = self.connection.execute(
+                    "INSERT INTO bookmarks (user_id, url) VALUES (?, ?)", (user_id, url)
+                ).lastrowid
+            if owns_transaction:
+                self.connection.execute("COMMIT")
+            else:
+                self.connection.commit()
+        except BaseException:
+            if owns_transaction and self.connection.in_transaction:
+                self.connection.execute("ROLLBACK")
+            raise
+        return bookmark_id
 
     def list_bookmarks(self, user_id: str) -> list:
         """Return a user's bookmarks in insertion order as (id, url) pairs."""
