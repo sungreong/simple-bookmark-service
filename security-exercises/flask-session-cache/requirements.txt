@@ -1,0 +1,2 @@
+# Intentionally vulnerable; isolated training fixture only.
+Flask==3.1.2
