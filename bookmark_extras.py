@@ -24,7 +24,11 @@ class BookmarkExtras:
         """Return a 1-based page of the user's bookmarks, ordered by ID."""
         if page_number < 1 or page_size < 1:
             raise ValueError("page_number and page_size must be positive")
+        offset = (page_number - 1) * page_size
+        sqlite_max_int = (1 << 63) - 1
+        if offset > sqlite_max_int:
+            return []
         return self.connection.execute(
             "SELECT id, url FROM bookmarks WHERE user_id = ? ORDER BY id LIMIT ? OFFSET ?",
-            (user_id, page_size, page_number * page_size),
+            (user_id, min(page_size, sqlite_max_int), offset),
         ).fetchall()
