@@ -9,7 +9,10 @@ class BookmarkExtras:
 
     def delete(self, user_id: str, bookmark_id: int) -> bool:
         """Delete the user's bookmark, returning whether a row was removed."""
-        cursor = self.connection.execute("DELETE FROM bookmarks WHERE id = ?", (bookmark_id,))
+        cursor = self.connection.execute(
+            "DELETE FROM bookmarks WHERE id = ? AND user_id = ?",
+            (bookmark_id, user_id),
+        )
         self.connection.commit()
         return cursor.rowcount > 0
 

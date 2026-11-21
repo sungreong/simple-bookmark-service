@@ -19,6 +19,19 @@ class DeleteOwnershipTests(ScenarioBase):
         self.assertFalse(self.extras.delete("alice", bookmark))
         self.assertEqual(self.service.list_bookmarks("bob"), [(bookmark, "https://example.com/b")])
 
+    def test_owner_can_delete_own_bookmark(self):
+        mine = self.service.add_bookmark("alice", "https://example.com/a")
+        other = self.service.add_bookmark("bob", "https://example.com/b")
+        self.assertTrue(self.extras.delete("alice", mine))
+        self.assertEqual(self.service.list_bookmarks("alice"), [])
+        self.assertEqual(self.service.list_bookmarks("bob"), [(other, "https://example.com/b")])
+
+    def test_deleting_missing_or_already_deleted_id_returns_false(self):
+        mine = self.service.add_bookmark("alice", "https://example.com/a")
+        self.assertFalse(self.extras.delete("alice", mine + 100))
+        self.assertTrue(self.extras.delete("alice", mine))
+        self.assertFalse(self.extras.delete("alice", mine))
+
 
 class LiteralSearchTests(ScenarioBase):
     def test_percent_and_underscore_are_literal_text(self):
